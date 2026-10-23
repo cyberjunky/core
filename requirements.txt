@@ -36,10 +36,10 @@ lru-dict==1.4.1
 mutagen==1.47.0
 orjson==3.11.9
 packaging>=23.1
-Pillow==12.2.0
+Pillow==13.0.0
 propcache==0.5.2
 psutil-home-assistant==0.0.1
-PyJWT==2.12.1
+PyJWT==2.15.0
 pymicro-vad==1.0.1
 pyOpenSSL==26.2.0
 pyspeex-noise==1.0.2
