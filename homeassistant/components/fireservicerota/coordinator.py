@@ -108,7 +108,10 @@ class FireServiceRotaWebSocket:
         self._hass = hass
         self._entry = entry
 
-        self._fsr_incidents = FireServiceRotaIncidents(on_incident=self._on_incident)
+        self._fsr_incidents = FireServiceRotaIncidents(
+            on_incident=self._on_incident,
+            on_connect_failed=self._on_connect_failed,
+        )
         self.incident_data = None
 
     def _construct_url(self) -> str:
@@ -122,6 +125,10 @@ class FireServiceRotaWebSocket:
         _LOGGER.debug("Received new incident via websocket: %s", data)
         self.incident_data = data
         dispatcher_send(self._hass, f"{DOMAIN}_{self._entry.entry_id}_update")
+
+    def _on_connect_failed(self) -> None:
+        """Refresh now, as the access token may have expired."""
+        self._hass.add_job(self._entry.runtime_data.async_request_refresh)
 
     def start_listener(self) -> None:
         """Start the websocket listener."""

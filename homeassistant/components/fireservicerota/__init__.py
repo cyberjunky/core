@@ -22,6 +22,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: FireServiceConfigEntry) 
     """Set up FireServiceRota from a config entry."""
 
     client = FireServiceRotaClient(hass, entry)
+    coordinator = FireServiceUpdateCoordinator(hass, client, entry)
+    # Needed by the websocket listener, which starts in client.setup()
+    entry.runtime_data = coordinator
+
     await client.setup()
 
     if client.token_refresh_failure:
@@ -31,11 +35,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FireServiceConfigEntry) 
         )
 
     entry.async_on_unload(client.async_stop_listener)
-    coordinator = FireServiceUpdateCoordinator(hass, client, entry)
 
     await coordinator.async_config_entry_first_refresh()
-
-    entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
