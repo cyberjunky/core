@@ -1,8 +1,10 @@
 """Test the FireServiceRota config flow."""
 
+from typing import Any
 from unittest.mock import patch
 
 from pyfireservicerota import InvalidAuthError
+import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
 from homeassistant import config_entries
@@ -69,13 +71,24 @@ async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_invalid_credentials(hass: HomeAssistant) -> None:
-    """Test that invalid credentials throws an error."""
+@pytest.mark.parametrize(
+    ("request_tokens", "error"),
+    [
+        pytest.param(
+            {"side_effect": InvalidAuthError}, "invalid_auth", id="invalid_auth"
+        ),
+        pytest.param({"return_value": {}}, "cannot_connect", id="cannot_connect"),
+    ],
+)
+async def test_form_errors(
+    hass: HomeAssistant, request_tokens: dict[str, Any], error: str
+) -> None:
+    """Test a failed token request shows an error and can be retried."""
 
     with patch(
-        "homeassistant.components.fireservicerota.coordinator.FireServiceRota.request_tokens",
-        side_effect=InvalidAuthError,
-    ):
+        "homeassistant.components.fireservicerota.config_flow.FireServiceRota"
+    ) as mock_fsr:
+        mock_fsr.return_value.request_tokens.configure_mock(**request_tokens)
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
@@ -87,7 +100,8 @@ async def test_invalid_credentials(hass: HomeAssistant) -> None:
             result["flow_id"],
             user_input=MOCK_CONF,
         )
-        assert result["errors"] == {"base": "invalid_auth"}
+        assert result["type"] is FlowResultType.FORM
+        assert result["errors"] == {"base": error}
 
     with (
         patch(

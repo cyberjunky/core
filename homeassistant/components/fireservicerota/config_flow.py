@@ -70,14 +70,22 @@ class FireServiceRotaFlowHandler(ConfigFlow, domain=DOMAIN):
             password=self._password,
         )
 
+        error = None
         try:
             token_info = await self.hass.async_add_executor_job(self.api.request_tokens)
         except InvalidAuthError:
+            error = "invalid_auth"
+        else:
+            # The library returns no tokens when the request itself failed
+            if not token_info:
+                error = "cannot_connect"
+
+        if error:
             self.api = None
             return self.async_show_form(
                 step_id=step_id,
                 data_schema=DATA_SCHEMA,
-                errors={"base": "invalid_auth"},
+                errors={"base": error},
             )
 
         data = {
